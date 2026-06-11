@@ -1,1 +1,545 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>오늘의 단어</title>
+<meta name="description" content="5개의 음소로 이루어진 한글 단어를 맞춰보세요!">
+<meta property="og:title" content="오늘의 단어">
+<meta property="og:description" content="5개의 음소로 이루어진 한글 단어를 맞춰보세요!">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  :root {
+    --bg:        #ffffff;
+    --bg2:       #f4f4f4;
+    --bg3:       #e8e8e8;
+    --text:      #1a1a1a;
+    --text2:     #555;
+    --text3:     #999;
+    --border:    rgba(0,0,0,0.15);
+    --border2:   rgba(0,0,0,0.28);
+    --green:     #85E093;
+    --yellow:    #FFE475;
+    --yellow-kakao: #FEE500;
+    --gray-tile: #CCCCCC;
+    --radius:    8px;
+    --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:        #1a1a1a;
+      --bg2:       #242424;
+      --bg3:       #2e2e2e;
+      --text:      #f0f0f0;
+      --text2:     #aaa;
+      --text3:     #666;
+      --border:    rgba(255,255,255,0.15);
+      --border2:   rgba(255,255,255,0.28);
+    }
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100dvh;
+    display: flex; flex-direction: column; align-items: center;
+  }
+
+  header {
+    width: 100%; max-width: 500px;
+    padding: 1rem 1rem 0;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px;
+    border-bottom: 0.5px solid var(--border);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  header h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.5px; }
+  header p  { font-size: 13px; color: var(--text2); }
+
+  #app { width: 100%; max-width: 500px; padding: 0 0.75rem 2rem; display: flex; flex-direction: column; align-items: center; }
+
+  #message    { min-height: 24px; font-size: 14px; font-weight: 500; text-align: center; margin-bottom: 0.4rem; }
+  #word-display { min-height: 18px; font-size: 13px; color: var(--text2); text-align: center; margin-bottom: 0.75rem; }
+
+  #board { display: flex; flex-direction: column; gap: 6px; margin-bottom: 1.25rem; }
+  .row   { display: flex; gap: 6px; justify-content: center; }
+
+  .cell {
+    width: 54px; height: 54px;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    perspective: 300px;
+    position: relative;
+  }
+  .cell-inner {
+    width: 100%; height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.5s ease;
+    border-radius: var(--radius);
+    position: relative;
+  }
+  .cell-front, .cell-back {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    font-size: 21px; font-weight: 500;
+  }
+  .cell-front { background: var(--bg); color: var(--text); }
+  .cell-back  { transform: rotateX(180deg); color: #fff; }
+  .back-correct { background: var(--green); }
+  .back-present { background: var(--yellow); }
+  .back-absent  { background: var(--gray-tile); }
+  .cell-inner.flip { transform: rotateX(180deg); }
+
+  .cell.active { border-color: var(--border2); }
+  .cell.filled { border-color: transparent; }
+  .cell.pop  { animation: pop  0.1s ease; }
+  .cell.shake { animation: shake 0.4s ease; }
+  @keyframes pop   { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
+
+  #keyboard { display: flex; flex-direction: column; gap: 5px; width: 100%; }
+  .kb-row   { display: flex; gap: 4px; justify-content: center; }
+
+  .key {
+    min-width: 34px; height: 46px; padding: 0 6px;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg2);
+    color: var(--text);
+    font-size: 17px; font-weight: 400;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-family: inherit;
+    transition: transform 0.08s ease, background 0.2s ease, color 0.2s ease;
+    user-select: none; -webkit-tap-highlight-color: transparent;
+  }
+  .key:hover  { background: var(--bg3); }
+  .key:active { transform: scale(0.94); }
+  .key.correct { background: var(--green)   !important; border-color: var(--green)   !important; color: #fff !important; }
+  .key.present { background: var(--yellow)  !important; border-color: var(--yellow)  !important; color: #fff !important; }
+  .key.absent  { background: var(--bg3)     !important; color: var(--text3)          !important; border-color: transparent !important; }
+  .key.pressed,
+  .key-enter.pressed {
+    transform: translateY(2px) scale(0.94);
+    filter: brightness(0.9);
+  }
+  .key-del  { font-size: 15px; min-width: 44px; }
+  .key-enter {
+    height: 48px; width: 100%;
+    font-size: 16px; font-weight: 500;
+    background: var(--yellow-kakao) !important;
+    color: var(--text) !important;
+    border: 0.5px solid var(--yellow-kakao) !important;
+    border-radius: var(--radius);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-family: inherit; user-select: none; -webkit-tap-highlight-color: transparent;
+    transition: transform 0.08s ease, background 0.2s ease, color 0.2s ease;
+  }
+  .key-enter:hover  { opacity: 0.82; }
+  .key-enter:active { transform: scale(0.98); }
+
+  .action-row {
+    display: flex; gap: 8px; justify-content: center; margin-top: 1rem; flex-wrap: wrap;
+  }
+  .btn-share, .btn-replay {
+    padding: 10px 22px; font-size: 14px; font-weight: 500; cursor: pointer;
+    border-radius: var(--radius); font-family: inherit;
+    border: 0.5px solid var(--border); user-select: none;
+  }
+  .btn-share  { background: var(--yellow-kakao); color: var(--text); border-color: var(--yellow-kakao); }
+  .btn-share:hover { opacity: 0.82; }
+  .btn-replay { background: var(--bg2); color: var(--text); }
+  .btn-replay:hover { background: var(--bg3); }
+
+  .toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: var(--bg);
+    padding: 8px 18px; border-radius: var(--radius); font-size: 13px;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 99;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>오늘의 단어</h1>
+  <p>5개의 음소로 이루어진 단어를 맞춰보세요 · 5번의 기회</p>
+</header>
+
+<div id="app">
+  <div id="message"></div>
+  <div id="word-display"></div>
+  <div id="board"></div>
+  <div id="keyboard"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const MAX_TRIES = 5;
+const WORD_LEN  = 5;
+
+const KEY_MAP = {
+  KeyQ: 'ㅂ',
+  KeyW: 'ㅈ',
+  KeyE: 'ㄷ',
+  KeyR: 'ㄱ',
+  KeyT: 'ㅅ',
+
+  KeyY: 'ㅛ',
+  KeyU: 'ㅕ',
+  KeyI: 'ㅑ',
+  KeyO: 'ㅐ',
+  KeyP: 'ㅔ',
+
+  KeyA: 'ㅁ',
+  KeyS: 'ㄴ',
+  KeyD: 'ㅇ',
+  KeyF: 'ㄹ',
+  KeyG: 'ㅎ',
+
+  KeyH: 'ㅗ',
+  KeyJ: 'ㅓ',
+  KeyK: 'ㅏ',
+  KeyL: 'ㅣ',
+
+  KeyZ: 'ㅋ',
+  KeyX: 'ㅌ',
+  KeyC: 'ㅊ',
+  KeyV: 'ㅍ',
+  KeyB: 'ㅠ',
+  KeyN: 'ㅜ',
+  KeyM: 'ㅡ'
+};
+const CHO  = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+const JUNG = ['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ','ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'];
+const JONG = ['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+const CJ = {'ㅘ':['ㅗ','ㅏ'],'ㅙ':['ㅗ','ㅐ'],'ㅚ':['ㅗ','ㅣ'],'ㅝ':['ㅜ','ㅓ'],'ㅞ':['ㅜ','ㅔ'],'ㅟ':['ㅜ','ㅣ'],'ㅢ':['ㅡ','ㅣ']};
+const CK = {'ㄳ':['ㄱ','ㅅ'],'ㄵ':['ㄴ','ㅈ'],'ㄶ':['ㄴ','ㅎ'],'ㄺ':['ㄹ','ㄱ'],'ㄻ':['ㄹ','ㅁ'],'ㄼ':['ㄹ','ㅂ'],'ㄽ':['ㄹ','ㅅ'],'ㄾ':['ㄹ','ㅌ'],'ㄿ':['ㄹ','ㅍ'],'ㅀ':['ㄹ','ㅎ'],'ㅄ':['ㅂ','ㅅ']};
+
+function decomposeChar(ch) {
+  const code = ch.charCodeAt(0) - 0xAC00;
+  if (code < 0 || code > 11171) return [ch];
+  const cho = CHO[Math.floor(code/28/21)];
+  const jung = JUNG[Math.floor(code/28)%21];
+  const jong = JONG[code%28];
+  const p = [cho];
+  if (CJ[jung]) p.push(...CJ[jung]); else p.push(jung);
+  if (jong) { if (CK[jong]) p.push(...CK[jong]); else p.push(jong); }
+  return p;
+}
+function decompose(w) { return w.split('').flatMap(decomposeChar); }
+
+const RAW_WORDS = [
+  '가방','갈비','강변','강물','가위','가을','간장','가지',
+  '개미','감자','거울','겨자','겨울','고기','고양','고추',
+  '곰국','구름','국화','귀신','그늘','그림','긴밤','기둥',
+  '기린','길목','나비','나물','남산','낙엽','날개','내일',
+  '낮달','냉국','냉면','노래','노을','녹차','눈길','눈물',
+  '눈밭','다람','다리','다슬','달님','달맞','달빛','담벼',
+  '대문','도깨','도라','도심','도토','독수','돌담','동굴',
+  '동백','동산','두부','두루','등대','라면','마당','마루',
+  '마음','마중','막걸','만두','망고','매화','머리','머루',
+  '먹구','모기','모닥','모래','목련','무릎','물결','물레',
+  '물새','미역','미루','바구','바다','바람','바위','반달',
+  '반딧','발길','발목','밤낮','밤비','밤새','방아','방울',
+  '배추','뱃길','백합','버들','별빛','보리','봄날','봄비',
+  '봄꽃','불꽃','부엉','부추','붓꽃','비둘','빛살','사과',
+  '사슴','사탕','산길','산봉','산새','상추','서울','새벽',
+  '생강','서리','석류','솔밭','솔잎','수박','수달','수리',
+  '수선','순두','숲길','시냇','쑥갓','아기','아늘','아침',
+  '안개','안뜰','앵두','야산','야생','어깨','어둠','얼음',
+  '여백','여름','여우','연기','연두','연꽃','오리','오솔',
+  '온기','올빼','완두','요리','우물','울림','유리','은하',
+  '이끼','이슬','잉어','자두','자연','작약','잠자','잡초',
+  '장미','저녁','저수','전복','절벽','젓갈','조개','조랑',
+  '졸졸','주전','죽순','지렁','지평','진달','진흙','참나',
+  '참새','참외','천둥','청솔','초록','초원','추석','치자',
+  '토끼','토란','파도','파란','팽이','폭포','풀밭','풀잎',
+  '피리','하늘','하루','하마','한강','해달','해돋','해바',
+  '해변','해살','해초','햇살','향기','허수','호두','호랑',
+  '호수','홍시','화분','화원','황새','황토','흑돌','흙길',
+  '흰눈','히아'
+];
+
+const VALID = RAW_WORDS.filter(w => decompose(w).length === WORD_LEN);
+
+function pickWord() {
+  const idx = Math.floor(Date.now()/86400000) % VALID.length;
+  return VALID[idx];
+}
+
+const KB_ROWS = [
+  ['ㅂ','ㅈ','ㄷ','ㄱ','ㅅ','ㅛ','ㅕ','ㅑ','⌫'],
+  ['ㅁ','ㄴ','ㅇ','ㄹ','ㅎ','ㅗ','ㅓ','ㅏ','ㅣ'],
+  ['ㅋ','ㅌ','ㅊ','ㅍ','ㅠ','ㅜ','ㅡ'],
+  ['확인'],
+];
+const ALL_KEYS = KB_ROWS.flat().filter(k => k !== '확인' && k !== '⌫');
+const WIN_MSGS = ['완벽해요!','대단해요!','훌륭해요!','잘했어요!','아슬아슬!'];
+const RESULT_EMOJI = { correct:'🟩', present:'🟨', absent:'⬜' };
+
+let answer, ansPhon, currentRow, currentInput, guesses, gameOver, keyStates;
+
+function init() {
+  answer       = pickWord();
+  ansPhon      = decompose(answer);
+  currentRow   = 0;
+  currentInput = [];
+  guesses      = [];
+  gameOver     = false;
+  keyStates    = {};
+  setMsg('');
+  document.getElementById('word-display').textContent = '';
+  const old = document.querySelector('.action-row');
+  if (old) old.remove();
+  renderBoard();
+  renderKeyboard();
+}
+
+function renderBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  for (let r = 0; r < MAX_TRIES; r++) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    for (let c = 0; c < WORD_LEN; c++) {
+      const cell  = document.createElement('div');
+      cell.className = 'cell';
+      cell.id = `cell-${r}-${c}`;
+      const inner = document.createElement('div');
+      inner.className = 'cell-inner';
+      const front = document.createElement('div');
+      front.className = 'cell-front';
+      const back  = document.createElement('div');
+      back.className = 'cell-back';
+      if (r < guesses.length) {
+        const g = guesses[r];
+        front.textContent = g.phonemes[c] || '';
+        back.textContent  = g.phonemes[c] || '';
+        back.classList.add(`back-${g.results[c]}`);
+        inner.classList.add('flip');
+        cell.classList.add('filled');
+      } else if (r === currentRow) {
+        front.textContent = currentInput[c] || '';
+        if (c < currentInput.length) cell.classList.add('filled');
+        if (c === currentInput.length && currentInput.length < WORD_LEN) cell.classList.add('active');
+      }
+      inner.appendChild(front);
+      inner.appendChild(back);
+      cell.appendChild(inner);
+      row.appendChild(cell);
+    }
+    board.appendChild(row);
+  }
+}
+
+function pressKey(key) {
+
+  const btn = document.querySelector(
+    `[data-key="${key}"]`
+  );
+
+  if (!btn) return;
+
+  btn.classList.add('pressed');
+
+  setTimeout(() => {
+    btn.classList.remove('pressed');
+  }, 120);
+}
+
+function renderKeyboard() {
+  const kb = document.getElementById('keyboard');
+  kb.innerHTML = '';
+  KB_ROWS.forEach(row => {
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'kb-row';
+    if (row[0] === '확인') rowDiv.style.display = 'block';
+    row.forEach(k => {
+      let btn;
+      if (k === '확인') {
+        btn = document.createElement('button');
+        btn.className = 'key-enter';
+        btn.textContent = '확인';
+        btn.dataset.key = '확인';
+      } else if (k === '⌫') {
+        btn = document.createElement('button');
+        btn.className = 'key key-del';
+        btn.textContent = '⌫';
+        btn.dataset.key = '⌫';
+      } else {
+        btn = document.createElement('button');
+        btn.className = 'key';
+        btn.textContent = k;
+        btn.dataset.key = k;
+        if (keyStates[k]) btn.classList.add(keyStates[k]);
+      }
+      btn.addEventListener('click', () => handleKey(k));
+      rowDiv.appendChild(btn);
+    });
+    kb.appendChild(rowDiv);
+  });
+}
+
+function setMsg(m) { document.getElementById('message').textContent = m; }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+function handleKey(k) {
+  if (gameOver) return;
+  if (k === '⌫') {
+    if (currentInput.length > 0) { currentInput.pop(); renderBoard(); }
+    return;
+  }
+  if (k === '확인') { submit(); return; }
+  if (currentInput.length < WORD_LEN) {
+    currentInput.push(k);
+    renderBoard();
+    const cell = document.getElementById(`cell-${currentRow}-${currentInput.length - 1}`);
+    if (cell) { cell.classList.remove('pop'); void cell.offsetWidth; cell.classList.add('pop'); }
+  }
+}
+
+function submit() {
+  if (currentInput.length < WORD_LEN) {
+    shakeRow(currentRow);
+    setMsg('음소 5개를 모두 입력하세요!');
+    return;
+  }
+  const results = Array(WORD_LEN).fill('absent');
+  const aCopy = [...ansPhon], iCopy = [...currentInput];
+  for (let i = 0; i < WORD_LEN; i++) {
+    if (iCopy[i] === aCopy[i]) { results[i] = 'correct'; aCopy[i] = null; iCopy[i] = null; }
+  }
+  for (let i = 0; i < WORD_LEN; i++) {
+    if (iCopy[i] === null) continue;
+    const idx = aCopy.indexOf(iCopy[i]);
+    if (idx !== -1) { results[i] = 'present'; aCopy[idx] = null; }
+  }
+  guesses.push({ phonemes: [...currentInput], results });
+  currentInput.forEach((ph, i) => {
+    if (!ALL_KEYS.includes(ph)) return;
+    const prev = keyStates[ph], res = results[i];
+    if (prev === 'correct') return;
+    if (prev === 'present' && res !== 'correct') return;
+    keyStates[ph] = res;
+  });
+  const row = currentRow;
+  currentRow++;
+  currentInput = [];
+  flipRow(row, guesses[row].phonemes, results, () => {
+    renderKeyboard();
+    const won = results.every(r => r === 'correct');
+    if (won) {
+      gameOver = true;
+      setMsg(WIN_MSGS[row] || '성공!');
+      showActions();
+    } else if (currentRow >= MAX_TRIES) {
+      gameOver = true;
+      setMsg('아쉬워요! 정답은...');
+      document.getElementById('word-display').textContent = `"${answer}"  (${ansPhon.join(' ')})`;
+      showActions();
+    }
+  });
+}
+
+function flipRow(rowIdx, phonemes, results, onDone) {
+  const DELAY = 120, DURATION = 500;
+  for (let c = 0; c < WORD_LEN; c++) {
+    const cell = document.getElementById(`cell-${rowIdx}-${c}`);
+    if (!cell) continue;
+    const inner = cell.querySelector('.cell-inner');
+    const back  = cell.querySelector('.cell-back');
+    back.classList.add(`back-${results[c]}`);
+    back.textContent  = phonemes[c] || '';
+    cell.querySelector('.cell-front').textContent = phonemes[c] || '';
+    setTimeout(() => inner.classList.add('flip'), c * DELAY);
+  }
+  setTimeout(onDone, WORD_LEN * DELAY + DURATION);
+}
+
+function shakeRow(rowIdx) {
+  for (let c = 0; c < WORD_LEN; c++) {
+    const cell = document.getElementById(`cell-${rowIdx}-${c}`);
+    if (!cell) continue;
+    cell.classList.remove('shake');
+    void cell.offsetWidth;
+    cell.classList.add('shake');
+  }
+}
+
+function showActions() {
+  const div = document.createElement('div');
+  div.className = 'action-row';
+  const shareBtn = document.createElement('button');
+  shareBtn.className = 'btn-share';
+  shareBtn.textContent = '결과 공유하기';
+  shareBtn.addEventListener('click', shareResult);
+  const replayBtn = document.createElement('button');
+  replayBtn.className = 'btn-replay';
+  replayBtn.textContent = '다시 하기';
+  replayBtn.addEventListener('click', init);
+  div.appendChild(shareBtn);
+  div.appendChild(replayBtn);
+  document.getElementById('keyboard').after(div);
+}
+
+function shareResult() {
+  const won = guesses[guesses.length-1]?.results.every(r => r === 'correct');
+  const tries = won ? `${guesses.length}/${MAX_TRIES}` : `X/${MAX_TRIES}`;
+  const grid = guesses.map(g => g.results.map(r => RESULT_EMOJI[r]).join('')).join('\n');
+  const text = `한글들 ${tries}\n\n${grid}\n\nhttps://loveghn.github.io/hangeuldeul`;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => showToast('클립보드에 복사됐어요!'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('클립보드에 복사됐어요!');
+  }
+}
+
+document.addEventListener('keydown', e => {
+
+  if (gameOver) return;
+
+  if (e.key === 'Backspace') {
+    e.preventDefault();
+    pressKey('⌫');
+    handleKey('⌫');
+    return;
+  }
+
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    pressKey('확인');
+    handleKey('확인');
+    return;
+  }
+
+  const koreanKey = KEY_MAP[e.code];
+
+  // 매핑 없는 키는 무시
+  if (!koreanKey) return;
+
+  e.preventDefault();
+
+  pressKey(koreanKey);
+  handleKey(koreanKey);
+
+});
+init();
+</script>
+</body>
+</html>
