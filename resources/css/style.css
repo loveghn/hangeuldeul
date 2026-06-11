@@ -1,0 +1,340 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #ffffff;
+  --bg2: #f4f4f4;
+  --bg3: #e8e8e8;
+  --text: #1a1a1a;
+  --text2: #555;
+  --text3: #999;
+  --border: rgba(0, 0, 0, 0.15);
+  --border2: rgba(0, 0, 0, 0.28);
+  --green: #85e093;
+  --yellow: #ffe475;
+  --yellow-kakao: #fee500;
+  --gray-tile: #cccccc;
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a1a;
+    --bg2: #242424;
+    --bg3: #2e2e2e;
+    --text: #f0f0f0;
+    --text2: #aaa;
+    --text3: #666;
+    --border: rgba(255, 255, 255, 0.15);
+    --border2: rgba(255, 255, 255, 0.28);
+  }
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+header {
+  width: 100%;
+  max-width: 500px;
+  padding: 1rem 1rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 0.5px solid var(--border);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+}
+header h1 {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+header p {
+  font-size: 13px;
+  color: var(--text2);
+}
+
+#app {
+  width: 100%;
+  max-width: 500px;
+  padding: 0 0.75rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#message {
+  min-height: 24px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  margin-bottom: 0.4rem;
+}
+#word-display {
+  min-height: 18px;
+  font-size: 13px;
+  color: var(--text2);
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+
+#board {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 1.25rem;
+}
+.row {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.cell {
+  width: 54px;
+  height: 54px;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  perspective: 300px;
+  position: relative;
+}
+.cell-inner {
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.5s ease;
+  border-radius: var(--radius);
+  position: relative;
+}
+.cell-front,
+.cell-back {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  font-size: 21px;
+  font-weight: 500;
+}
+.cell-front {
+  background: var(--bg);
+  color: var(--text);
+}
+.cell-back {
+  transform: rotateX(180deg);
+  color: #fff;
+}
+.back-correct {
+  background: var(--green);
+}
+.back-present {
+  background: var(--yellow);
+}
+.back-absent {
+  background: var(--gray-tile);
+}
+.cell-inner.flip {
+  transform: rotateX(180deg);
+}
+
+.cell.active {
+  border-color: var(--border2);
+}
+.cell.filled {
+  border-color: transparent;
+}
+.cell.pop {
+  animation: pop 0.1s ease;
+}
+.cell.shake {
+  animation: shake 0.4s ease;
+}
+@keyframes pop {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+#keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+}
+.kb-row {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.key {
+  min-width: 34px;
+  height: 46px;
+  padding: 0 6px;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg2);
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 400;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  transition:
+    transform 0.08s ease,
+    background 0.2s ease,
+    color 0.2s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.key:hover {
+  background: var(--bg3);
+}
+.key:active {
+  transform: scale(0.94);
+}
+.key.correct {
+  background: var(--green) !important;
+  border-color: var(--green) !important;
+  color: #fff !important;
+}
+.key.present {
+  background: var(--yellow) !important;
+  border-color: var(--yellow) !important;
+  color: #fff !important;
+}
+.key.absent {
+  background: var(--bg3) !important;
+  color: var(--text3) !important;
+  border-color: transparent !important;
+}
+.key.pressed,
+.key-enter.pressed {
+  transform: translateY(2px) scale(0.94);
+  filter: brightness(0.9);
+}
+.key-del {
+  font-size: 15px;
+  min-width: 44px;
+}
+.key-enter {
+  height: 48px;
+  width: 100%;
+  font-size: 16px;
+  font-weight: 500;
+  background: var(--yellow-kakao) !important;
+  color: var(--text) !important;
+  border: 0.5px solid var(--yellow-kakao) !important;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 0.08s ease,
+    background 0.2s ease,
+    color 0.2s ease;
+}
+.key-enter:hover {
+  opacity: 0.82;
+}
+.key-enter:active {
+  transform: scale(0.98);
+}
+
+.action-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+.btn-share,
+.btn-replay {
+  padding: 10px 22px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--radius);
+  font-family: inherit;
+  border: 0.5px solid var(--border);
+  user-select: none;
+}
+.btn-share {
+  background: var(--yellow-kakao);
+  color: var(--text);
+  border-color: var(--yellow-kakao);
+}
+.btn-share:hover {
+  opacity: 0.82;
+}
+.btn-replay {
+  background: var(--bg2);
+  color: var(--text);
+}
+.btn-replay:hover {
+  background: var(--bg3);
+}
+
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: var(--bg);
+  padding: 8px 18px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 99;
+  white-space: nowrap;
+}
+.toast.show {
+  opacity: 1;
+}
