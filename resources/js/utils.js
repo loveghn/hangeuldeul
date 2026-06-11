@@ -18,7 +18,14 @@ function decompose(w) {
   return w.split("").flatMap(decomposeChar);
 }
 
-const VALID = RAW_WORDS.filter((w) => decompose(w).length === WORD_LEN);
+const VALID = RAW_WORDS.filter(word => {
+  const phonemes = decompose(word);
+
+  return (
+    phonemes.length === WORD_LEN &&
+    phonemes.every(ph => ALL_KEYS.includes(ph))
+  );
+});
 
 function pickWord() {
   const idx = Math.floor(Date.now() / 86400000) % VALID.length;
@@ -49,3 +56,11 @@ function showToast(msg) {
   t.classList.add("show");
   setTimeout(() => t.classList.remove("show"), 1800);
 }
+
+const ALLOWED_PHONEMES = new Set(
+  VALID.map(word => decompose(word).join(''))
+);
+
+const VALID_WORD_SET = new Set(
+  RAW_WORDS.map(word => decompose(word).join(''))
+);

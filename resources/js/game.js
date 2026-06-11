@@ -86,11 +86,14 @@ function renderKeyboard() {
 }
 
 function submit() {
-  if (currentInput.length < WORD_LEN) {
+  const inputWord = currentInput.join('');
+
+  if (!ALLOWED_PHONEMES.has(inputWord)) {
     shakeRow(currentRow);
-    setMsg("음소 5개를 모두 입력하세요!");
+    setMsg('사전에 없는 단어예요.');
     return;
   }
+
   const results = Array(WORD_LEN).fill("absent");
   const aCopy = [...ansPhon],
     iCopy = [...currentInput];

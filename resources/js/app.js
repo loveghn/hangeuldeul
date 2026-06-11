@@ -17,7 +17,7 @@ document.addEventListener("keydown", (e) => {
 
   const koreanKey = KEY_MAP[e.code];
 
-  // 매핑 없는 키는 무시
+  // 키보드 레이아웃에 없는 키 무시
   if (!koreanKey) return;
 
   e.preventDefault();
